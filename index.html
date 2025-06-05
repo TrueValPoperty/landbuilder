@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Landbuilder</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
+    <style>#map { height: 600px; }</style>
+</head>
+<body>
+    <h2>Draw a plot of land</h2>
+    <div id="map"></div>
+    <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css"/>
+    <script>
+        var map = L.map('map').setView([50.03, -5.26], 14);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+        var drawnItems = new L.FeatureGroup();
+        map.addLayer(drawnItems);
+
+        var drawControl = new L.Control.Draw({
+            edit: { featureGroup: drawnItems },
+            draw: { polygon: true, marker: false, circle: false, rectangle: false, polyline: false }
+        });
+        map.addControl(drawControl);
+
+        map.on('draw:created', function (e) {
+            var layer = e.layer;
+            drawnItems.addLayer(layer);
+            var geojson = layer.toGeoJSON();
+            var area = L.GeometryUtil.geodesicArea(geojson.geometry.coordinates[0]);
+            fetch('/upload', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ geometry: geojson.geometry, area_m2: area })
+            })
+            .then(res => res.json())
+            .then(data => alert(JSON.stringify(data)));
+        });
+    </script>
+</body>
+</html>
